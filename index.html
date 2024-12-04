@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="./style.css">
+    
+    <!-- Additional CodeMirror modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="file-operations">
+                <button id="newFile"><i class="fas fa-file"></i> New</button>
+                <button id="openFile"><i class="fas fa-folder-open"></i> Open File</button>
+                <button id="openFolder"><i class="fas fa-folder-plus"></i> Open Folder</button>
+                <button id="save"><i class="fas fa-save"></i> Save</button>
+                <button id="saveAs"><i class="fas fa-save"></i> Save As</button>
+                <input type="file" id="fileInput" style="display: none">
+                <input type="file" id="folderInput" webkitdirectory directory style="display: none">
+            </div>
+            <div class="edit-operations">
+                <button id="selectAll"><i class="fas fa-check-double"></i> Select All</button>
+                <button id="copy"><i class="fas fa-copy"></i> Copy</button>
+                <button id="cut"><i class="fas fa-cut"></i> Cut</button>
+                <button id="paste"><i class="fas fa-paste"></i> Paste</button>
+            </div>
+            <div class="syntax-select">
+                <select id="syntaxSelect">
+                    <!-- Web Development -->
+                    <option value="javascript">JavaScript</option>
+                    <option value="xml">HTML/XML</option>
+                    <option value="css">CSS</option>
+                    
+                    <!-- Programming Languages -->
+                    <option value="python">Python</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="php">PHP</option>
+                    <option value="java">Java</option>
+                    <option value="clike">C/C++/C#</option>
+                    
+                    <!-- Data & Config -->
+                    <option value="javascript">JSON</option>
+                    <option value="yaml">YAML</option>
+                    <option value="toml">TOML</option>
+                    
+                    <!-- Documentation -->
+                    <option value="markdown">Markdown</option>
+                    <option value="text">Plain Text</option>
+                    
+                    <!-- Game Development -->
+                    <option value="javascript">GDScript</option>
+                </select>
+            </div>
+            <div class="github-operations">
+                <button id="githubLogin">GitHub Login</button>
+                <button id="cloneRepo">Clone Repository</button>
+                <button id="commitPush">Commit & Push</button>
+                <button id="pullChanges">Pull Changes</button>
+            </div>
+        </div>
+        <div class="main-container">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <button class="sidebar-toggle active" id="toggleFileExplorer">
+                        <i class="fas fa-folder"></i>
+                    </button>
+                    <button class="sidebar-toggle" id="toggleOutliner">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button class="sidebar-toggle" id="toggleSourceControl">
+                        <i class="fas fa-code-branch"></i>
+                    </button>
+                </div>
+                <div class="sidebar-content active" id="fileExplorer">
+                    <div class="explorer-header">
+                        <span>EXPLORER</span>
+                        <div class="explorer-actions">
+                            <button id="closeFolder" style="display: none">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button id="collapseAll">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </button>
+                            <button id="expandAll">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="folder-structure"></div>
+                </div>
+                <div class="sidebar-content" id="outliner">
+                    <div class="explorer-header">
+                        <span>OUTLINE</span>
+                    </div>
+                    <div class="outline-structure"></div>
+                </div>
+                <div class="sidebar-content" id="sourceControl">
+                    <div class="explorer-header">
+                        <span>SOURCE CONTROL</span>
+                        <div class="explorer-actions">
+                            <button id="refreshRepo" title="Refresh">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="source-control-content">
+                        <div class="branch-info">
+                            <div class="current-branch">
+                                <i class="fas fa-code-branch"></i>
+                                <span id="currentBranch">main</span>
+                            </div>
+                            <button id="changeBranch" class="icon-button">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+                        </div>
+                        <div class="changes-section">
+                            <div class="section-header">
+                                <span>Changes</span>
+                                <div class="section-actions">
+                                    <button id="stageAllChanges" title="Stage All Changes">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="changedFiles" class="changed-files"></div>
+                        </div>
+                        <div class="staged-section">
+                            <div class="section-header">
+                                <span>Staged Changes</span>
+                                <div class="section-actions">
+                                    <button id="unstageAllChanges" title="Unstage All Changes">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="stagedFiles" class="staged-files"></div>
+                        </div>
+                        <div class="commit-section">
+                            <textarea id="commitMessage" placeholder="Commit message"></textarea>
+                            <button id="commitChanges" class="commit-button">
+                                <i class="fas fa-check"></i> Commit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="editor-container">
+                <div id="tabs" class="tabs"></div>
+                <div id="editor" class="editor"></div>
+            </div>
+        </div>
+    </div>
+    <button id="toggleSidebar" class="toggle-sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div id="githubModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">GitHub Operation</h2>
+            <div id="modalBody">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+    <script src="./script.js"></script>
+</body>
+</html>
