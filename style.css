@@ -18,18 +18,27 @@ body {
     color: #d4d4d4;
 }
 
+/* Replace/update the existing toolbar styles */
 .toolbar {
     display: flex;
     padding: 5px 10px;
     background-color: #2d2d2d;
     border-bottom: 1px solid #1a1a1a;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Keep this */
+    align-items: center;
+    min-height: fit-content;
+    overflow-x: auto; /* Allow horizontal scrolling if needed */
 }
 
-.file-operations, .edit-operations {
+.file-operations, 
+.edit-operations,
+.syntax-select,
+.github-operations {
     display: flex;
     gap: 5px;
+    flex-wrap: nowrap; /* Prevent buttons from wrapping within groups */
+    align-items: center;
 }
 
 .toolbar button {
@@ -280,11 +289,6 @@ body {
 }
 
 /* Github */
-
-.github-operations {
-    display: flex;
-    gap: 5px;
-}
 
 .modal {
     display: none;
