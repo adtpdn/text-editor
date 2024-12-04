@@ -65,7 +65,14 @@ class Editor {
     initializeEventListeners() {
         document.getElementById('newFile').addEventListener('click', () => this.newFile());
         document.getElementById('openFile').addEventListener('click', () => document.getElementById('fileInput').click());
-        document.getElementById('openFolder').addEventListener('click', () => document.getElementById('folderInput').click());
+        // document.getElementById('openFolder').addEventListener('click', () => document.getElementById('folderInput').click());
+        document.getElementById('openFolder').addEventListener('click', () => {
+        if (this.isMobileDevice()) {
+            alert('Folder selection is not fully supported on mobile devices. Please use a desktop browser for full functionality.');
+            return;
+        }
+        document.getElementById('folderInput').click();
+        });
         document.getElementById('save').addEventListener('click', () => this.save());
         document.getElementById('saveAs').addEventListener('click', () => this.saveAs());
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileSelect(e));
