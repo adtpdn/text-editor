@@ -663,4 +663,26 @@ body {
     .toggle-sidebar {
         display: block;
     }
+
+    .toolbar {
+        padding: 5px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .toolbar button {
+        padding: 8px;
+        min-width: 44px; /* Minimum touch target size */
+        min-height: 44px;
+    }
+
+    .folder-item {
+        padding: 8px;
+        min-height: 44px;
+    }
+
+    .tab {
+        min-width: 100px;
+        max-width: 150px;
+    }
 }
