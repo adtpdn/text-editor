@@ -917,8 +917,12 @@ class Editor {
     }
 
     async handleFolderSelect(event) {
-        const files = Array.from(event.target.files);
-        if (files.length === 0) return;
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    try {
+        // Show loading indicator
+        this.showLoadingIndicator();
 
         this.currentWorkingDirectory = event.target.files[0].webkitRelativePath.split('/')[0];
         document.getElementById('closeFolder').style.display = 'block';
@@ -930,17 +934,57 @@ class Editor {
             children: {}
         };
 
-        for (const file of files) {
+        // Process files in chunks
+        const CHUNK_SIZE = 50; // Adjust this number based on performance
+        for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+            const chunk = files.slice(i, i + CHUNK_SIZE);
+            await this.processFileChunk(chunk);
+            
+            // Update loading progress
+            this.updateLoadingProgress(i + chunk.length, files.length);
+            
+            // Allow UI to update
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        this.renderFolderStructure();
+        event.target.value = '';
+        
+        // Hide loading indicator
+        this.hideLoadingIndicator();
+        } catch (error) {
+        console.error('Error loading folder:', error);
+        this.hideLoadingIndicator();
+        alert('Error loading folder: ' + error.message);
+        }
+    }
+
+    // Add these helper methods to your Editor class
+async processFileChunk(files) {
+    for (const file of files) {
+        try {
             const pathParts = file.webkitRelativePath.split('/');
             let currentLevel = this.folderStructure;
 
-            // Skip the first part as it's the root folder name
+            // Skip files larger than 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                console.warn(`Skipping large file: ${file.name}`);
+                continue;
+            }
+
+            // Skip binary files
+            if (this.isBinaryFile(file)) {
+                console.warn(`Skipping binary file: ${file.name}`);
+                continue;
+            }
+
+            // Process the file path
             for (let i = 1; i < pathParts.length; i++) {
                 const part = pathParts[i];
                 
                 if (i === pathParts.length - 1) {
                     // It's a file
-                    const content = await this.readFile(file);
+                    const content = await this.readFileWithTimeout(file);
                     currentLevel.children[part] = {
                         type: 'file',
                         name: part,
@@ -959,11 +1003,75 @@ class Editor {
                     currentLevel = currentLevel.children[part];
                 }
             }
+        } catch (error) {
+            console.warn(`Error processing file ${file.name}:`, error);
         }
-
-        this.renderFolderStructure();
-        event.target.value = '';
     }
+}
+
+isBinaryFile(file) {
+    const binaryExtensions = [
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.pdf', 
+        '.doc', '.docx', '.xls', '.xlsx', '.zip', '.rar', '.7z',
+        '.exe', '.dll', '.so', '.dylib', '.class'
+    ];
+    
+    return binaryExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+    );
+}
+
+async readFileWithTimeout(file, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            reject(new Error('File reading timed out'));
+        }, timeout);
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            clearTimeout(timeoutId);
+            resolve(e.target.result);
+        };
+        reader.onerror = (e) => {
+            clearTimeout(timeoutId);
+            reject(e);
+        };
+        reader.readAsText(file);
+    });
+}
+
+showLoadingIndicator() {
+    // Create loading indicator if it doesn't exist
+    if (!document.getElementById('loadingIndicator')) {
+        const loadingHTML = `
+            <div id="loadingIndicator" class="loading-overlay">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading folder...</div>
+                    <div class="loading-progress">0%</div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', loadingHTML);
+    }
+    document.getElementById('loadingIndicator').style.display = 'flex';
+}
+
+hideLoadingIndicator() {
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
+}
+
+updateLoadingProgress(current, total) {
+    const progress = document.querySelector('#loadingIndicator .loading-progress');
+    if (progress) {
+        const percentage = Math.round((current / total) * 100);
+        progress.textContent = `${percentage}%`;
+    }
+}
+    
     renderFolderStructure(structure = this.folderStructure, container = document.querySelector('.folder-structure')) {
         if (!structure) return;
         container.innerHTML = '';
