@@ -22,6 +22,10 @@ class Editor {
 
     }
 
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
     initializeTreeControls() {
         const collapseAllBtn = document.getElementById('collapseAll');
         const expandAllBtn = document.getElementById('expandAll');
@@ -917,11 +921,16 @@ class Editor {
     }
 
     async handleFolderSelect(event) {
+    // Check if running on a mobile device
+    if (this.isMobileDevice()) {
+        alert('Folder selection is not fully supported on mobile devices. Please use the file picker or GitHub integration instead.');
+        return;
+    }
+
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
     try {
-        // Show loading indicator
         this.showLoadingIndicator();
 
         this.currentWorkingDirectory = event.target.files[0].webkitRelativePath.split('/')[0];
@@ -934,65 +943,61 @@ class Editor {
             children: {}
         };
 
-        // Process files in chunks
-        const CHUNK_SIZE = 50; // Adjust this number based on performance
+        // Process files in smaller chunks to prevent freezing
+        const CHUNK_SIZE = 10;
         for (let i = 0; i < files.length; i += CHUNK_SIZE) {
             const chunk = files.slice(i, i + CHUNK_SIZE);
             await this.processFileChunk(chunk);
-            
-            // Update loading progress
             this.updateLoadingProgress(i + chunk.length, files.length);
-            
-            // Allow UI to update
-            await new Promise(resolve => setTimeout(resolve, 0));
+            await new Promise(resolve => setTimeout(resolve, 10)); // Small delay to prevent UI freezing
         }
 
         this.renderFolderStructure();
         event.target.value = '';
-        
-        // Hide loading indicator
         this.hideLoadingIndicator();
-        } catch (error) {
+    } catch (error) {
         console.error('Error loading folder:', error);
         this.hideLoadingIndicator();
         alert('Error loading folder: ' + error.message);
-        }
     }
+}
 
     // Add these helper methods to your Editor class
 async processFileChunk(files) {
+    const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB limit for mobile
+
     for (const file of files) {
         try {
-            const pathParts = file.webkitRelativePath.split('/');
-            let currentLevel = this.folderStructure;
-
-            // Skip files larger than 5MB
-            if (file.size > 5 * 1024 * 1024) {
+            if (file.size > MAX_FILE_SIZE) {
                 console.warn(`Skipping large file: ${file.name}`);
                 continue;
             }
 
-            // Skip binary files
+            // Skip binary and large files
             if (this.isBinaryFile(file)) {
                 console.warn(`Skipping binary file: ${file.name}`);
                 continue;
             }
 
-            // Process the file path
+            const pathParts = file.webkitRelativePath.split('/');
+            let currentLevel = this.folderStructure;
+
             for (let i = 1; i < pathParts.length; i++) {
                 const part = pathParts[i];
                 
                 if (i === pathParts.length - 1) {
-                    // It's a file
-                    const content = await this.readFileWithTimeout(file);
-                    currentLevel.children[part] = {
-                        type: 'file',
-                        name: part,
-                        content: content,
-                        path: file.webkitRelativePath
-                    };
+                    try {
+                        const content = await this.readFileWithTimeout(file, 3000); // 3 second timeout
+                        currentLevel.children[part] = {
+                            type: 'file',
+                            name: part,
+                            content: content,
+                            path: file.webkitRelativePath
+                        };
+                    } catch (error) {
+                        console.warn(`Error reading file ${file.name}:`, error);
+                    }
                 } else {
-                    // It's a folder
                     if (!currentLevel.children[part]) {
                         currentLevel.children[part] = {
                             type: 'folder',
