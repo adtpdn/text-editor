@@ -75,12 +75,18 @@ class Editor {
             alert('Folder selection is not fully supported on mobile devices. Please use a desktop browser for full functionality.');
             return;
         }
-        document.getElementById('folderInput').click();
-        });
+        const folderInput = document.getElementById('folderInput');
+        folderInput.setAttribute('webkitdirectory', '');
+        folderInput.setAttribute('directory', '');
+        folderInput.click();
+    });
         document.getElementById('save').addEventListener('click', () => this.save());
         document.getElementById('saveAs').addEventListener('click', () => this.saveAs());
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileSelect(e));
-        document.getElementById('folderInput').addEventListener('change', (e) => this.handleFolderSelect(e));
+        
+        document.getElementById('folderInput').addEventListener('change', (e) => { if (e.target.files.length > 0) { this.handleFolderSelect(e); } });
+        
+        // document.getElementById('folderInput').addEventListener('change', (e) => this.handleFolderSelect(e));
         document.getElementById('syntaxSelect').addEventListener('change', (e) => this.changeSyntax(e));
         document.getElementById('closeFolder').addEventListener('click', () => this.closeFolder());
         document.getElementById('collapseAll').addEventListener('click', () => this.collapseAllFolders());
@@ -920,20 +926,17 @@ class Editor {
         document.getElementById('stagedFiles').innerHTML = '';
     }
 
-    async handleFolderSelect(event) {
-    // Check if running on a mobile device
-    if (this.isMobileDevice()) {
-        alert('Folder selection is not fully supported on mobile devices. Please use the file picker or GitHub integration instead.');
-        return;
-    }
-
+    
+async handleFolderSelect(event) {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
     try {
+        // Show loading indicator
         this.showLoadingIndicator();
 
-        this.currentWorkingDirectory = event.target.files[0].webkitRelativePath.split('/')[0];
+        // Get the root folder name from the first file's path
+        this.currentWorkingDirectory = files[0].webkitRelativePath.split('/')[0];
         document.getElementById('closeFolder').style.display = 'block';
 
         // Create folder structure
@@ -943,17 +946,26 @@ class Editor {
             children: {}
         };
 
-        // Process files in smaller chunks to prevent freezing
-        const CHUNK_SIZE = 10;
+        // Process files in chunks
+        const CHUNK_SIZE = 50;
         for (let i = 0; i < files.length; i += CHUNK_SIZE) {
             const chunk = files.slice(i, i + CHUNK_SIZE);
             await this.processFileChunk(chunk);
+            
+            // Update loading progress
             this.updateLoadingProgress(i + chunk.length, files.length);
-            await new Promise(resolve => setTimeout(resolve, 10)); // Small delay to prevent UI freezing
+            
+            // Allow UI to update
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
 
+        // Render the folder structure
         this.renderFolderStructure();
+        
+        // Clear the input
         event.target.value = '';
+        
+        // Hide loading indicator
         this.hideLoadingIndicator();
     } catch (error) {
         console.error('Error loading folder:', error);
@@ -962,8 +974,17 @@ class Editor {
     }
 }
 
+
+    updateLoadingProgress(current, total) { const progress = document.querySelector('#loadingIndicator .loading-progress'); if (progress) { const percentage = Math.round((current / total) * 100); progress.textContent = `${percentage}%`; } }
+
+    showLoadingIndicator() { if (!document.getElementById('loadingIndicator')) { const loadingHTML = ` <div id="loadingIndicator" class="loading-overlay"> <div class="loading-content"> <div class="loading-spinner"></div> <div class="loading-text">Loading folder...</div> <div class="loading-progress">0%</div> </div> </div> `; document.body.insertAdjacentHTML('beforeend', loadingHTML); } document.getElementById('loadingIndicator').style.display = 'flex'; }
+
+
+    hideLoadingIndicator() { const indicator = document.getElementById('loadingIndicator'); if (indicator) { indicator.style.display = 'none'; } }
+    
     // Add these helper methods to your Editor class
-async processFileChunk(files) {
+
+    async processFileChunk(files) {
     const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB limit for mobile
 
     for (const file of files) {
